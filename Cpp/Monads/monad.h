@@ -17,7 +17,7 @@ namespace monads
     public:
         std::function<T(void)> inner;
 
-        monad(std::function<T(void)> const &inner)
+        monad(std::function<T(void)> inner)
         {
             this->inner = inner;
         }
@@ -40,10 +40,12 @@ namespace monads
         /// a bool monad.
         ///
         template <typename A, typename B>
-        friend auto operator|(monad<A> const &input, MONAD_TRANSMUTE(A, B) const &func) -> monad<B>
+        friend auto operator|(monad<A> const input, MONAD_TRANSMUTE(A, B) func) -> monad<B>
         {
-            return monad<B>([&input, &func]() -> B
+            //std::cout << "M unit | outer" << std::endl;
+            return monad<B>([input, func]() -> B
             {
+                //std::cout << "M unit | inner." << std::endl;
                 return func(input.inner).inner();
             });
         }
@@ -52,10 +54,12 @@ namespace monads
         /// Monadic unit operator with immediate execution.
         ///
         template <typename A, typename B>
-        friend auto operator||(monad<A> const &input, MONAD_TRANSMUTE(A, B) const &func) -> monad<B>
+        friend auto operator||(monad<A> const input, MONAD_TRANSMUTE(A, B) const func) -> monad<B>
         {
-            auto mnd = monad<B>([&input, &func]() -> B
+            //std::cout << "M unit || outer" << std::endl;
+            auto mnd = monad<B>([input, func]() -> B
             {
+                //std::cout << "M unit || inner" << std::endl;
                 return func(input.inner).inner();
             });
 

@@ -7,9 +7,9 @@ namespace monads
 
     }
 
-    auto control::then_if(std::function<void(void)> const &is_true) -> std::function<monad<bool>(std::function<bool(void)>)>
+    auto control::then_if(std::function<void(void)> const is_true) -> MONAD_CHAIN(bool)
     {
-        return [&is_true](std::function<bool(void)> func) -> monad<bool>
+        return [is_true](std::function<bool(void)> func) -> monad<bool>
         {
             auto eval = func();
             if (eval)
@@ -21,9 +21,9 @@ namespace monads
         };
     }
 
-    auto control::then_if_not(std::function<void(void)> const &expr) -> std::function<monad<bool>(std::function<bool(void)>)>
+    auto control::then_if_not(std::function<void(void)> const expr) -> MONAD_CHAIN(bool)
     {
-        return [&expr](std::function<bool(void)> func) -> monad<bool>
+        return [expr](std::function<bool(void)> func) -> monad<bool>
         {
             auto eval = func();
             if (!eval)
@@ -35,7 +35,7 @@ namespace monads
         };
     }
 
-    auto control::add(int const expr) -> std::function<monad<int>(std::function<int(void)>)>
+    auto control::add(int const expr) -> MONAD_CHAIN(int)
     {
         return [expr](std::function<int(void)> func) -> monad<int>
         {

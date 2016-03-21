@@ -3,30 +3,124 @@
 
 #include <functional>
 #include <iostream>
+#include <vector>
+#include <tuple>
 
 #include "monad.h"
 
 namespace monads
 {
+    typedef std::tuple<int, int> int2tuple;
+
     class control
     {
     public:
         control();
 
-        auto static then_if(std::function<void(void)> const &is_true) -> MONAD_CHAIN(bool);
-        auto static then_if_not(std::function<void(void)> const &expr) -> MONAD_CHAIN(bool);
+        // Identity.
+        template <typename T>
+        auto static identity() -> MONAD_CHAIN(T)
+        {
+            return [](std::function<T(void)> func) -> monad<T>
+            {
+                auto eval = func();
+                return monad<T>(eval);
+            };
+        }
+
+        // Intercept any monad chain and tamper with its current inner object.
+        template <typename T>
+        auto static intercept(std::function<void(T &)> with) -> MONAD_CHAIN(T)
+        {
+            return [with](std::function<T(void)> func) -> monad<T>
+            {
+                auto eval = func();
+                with(eval);
+
+                return monad<T>(eval);
+            };
+        }
+
+        // Conditionals with bool.
+        auto static then_if(std::function<void(void)> const is_true) -> MONAD_CHAIN(bool);
+        auto static then_if_not(std::function<void(void)> const expr) -> MONAD_CHAIN(bool);
         #define DECIDE(cond, yes, no) monad<bool>(cond)|control::then_if(CLAM(yes))||control::then_if_not(CLAM(no));
 
+        // int
         auto static add(int const expr) -> MONAD_CHAIN(int);
 
+        // For-each with std::vector.
         template <typename T>
-        auto static mnd_equals(T const &expr) -> MONAD_TRANSMUTE(T, bool)
+        auto static mnd_for(std::function<void(T &)> expr) -> MONAD_CHAIN(std::vector<T>)
         {
-            return [&expr](std::function<T(void)> func) -> monad<bool>
+            return [expr](std::function<std::vector<T>(void)> func) -> monad<std::vector<T>>
+            {
+                auto eval = func();
+
+                std::for_each(std::begin(eval), std::end(eval), [expr](T element)
+                {
+                    expr(element);
+                });
+
+                return monad<std::vector<T>>(eval);
+            };
+        }
+
+        // Append with std::vector.
+        template <typename T>
+        auto static append(T thing) -> MONAD_CHAIN(std::vector<T>)
+        {
+            return [thing](std::function<std::vector<T>(void)> func) -> monad<std::vector<T>>
+            {
+                auto eval = func();
+
+                eval.push_back(thing);
+
+                return monad<std::vector<T>>(eval);
+            };
+        }
+
+        // For cycle with int tuple.
+        auto static mnd_for(std::function<void(int)> expr) -> MONAD_CHAIN(int2tuple)
+        {
+            return [expr](std::function<int2tuple(void)> func) -> monad<int2tuple>
+            {
+                auto eval = func();
+
+                int start = std::get<0>(eval);
+                int end = std::get<1>(eval);
+
+                for(auto i = start; i < end; ++i)
+                {
+                    expr(i);
+                }
+
+                return monad<int2tuple>(eval);
+            };
+        }
+
+        // Equals (transmute).
+        template <typename T>
+        auto static mnd_equals(T const expr) -> MONAD_TRANSMUTE(T, bool)
+        {
+            return [expr](std::function<T(void)> func) -> monad<bool>
             {
                 auto eval = func();
 
                 return monad<bool>(eval == expr);
+            };
+        }
+
+        // Manual trasmute.
+        template <typename A, typename B>
+        auto static transmute(MONAD_TRANSMUTE(A, B) const expr) -> MONAD_TRANSMUTE(A, B)
+        {
+            return [expr](std::function<A(void)> func) -> monad<B>
+            {
+                auto eval = func();
+                auto ret = expr(eval);
+
+                return monad<B>(ret);
             };
         }
     };
