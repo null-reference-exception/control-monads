@@ -9,6 +9,27 @@ using namespace monads;
 void fn1() {cout << "AYE" << endl;}
 void fn2() {cout << "NAY" << endl;}
 
+class thing
+{
+public:
+    int n{0};
+
+    thing(int t_n)
+    {
+        this->n = t_n;
+    }
+
+    thing(const thing& th) : n(th.n)
+    {
+        //cout << "(Thing copy ctor used.)" << endl;
+    }
+
+    thing(thing&& th) noexcept : n(std::move(th.n))
+    {
+        //cout << "(Thing move ctor used.)" << endl;
+    }
+};
+
 int main(int argc, char *argv[])
 {
     cout << "Monad definition start." << endl;
@@ -51,6 +72,31 @@ int main(int argc, char *argv[])
                 cout << i << endl;
             });
 
+    auto th = thing(19);
+    auto mov =
+    monad<thing>(th)
+        | control::intercept<thing>([](thing &ic)
+            {
+                ;
+            });
+
+    // Mini linq. (Also inefficient as hell. :) )
+    vector<thing> things = {thing(1), thing(2), thing(3), thing(4), thing(5), thing(6)};
+    auto mini_linq =
+    monad<vector<thing>>(things)
+        | control::where<thing>([](thing &t)
+            {
+                return t.n > 3;
+            })
+        | control::select<thing, int>([](thing &t)
+            {
+                return t.n;
+            })
+        | control::mnd_for<int>([](int t)
+            {
+                cout << "things after where: " << t << endl;
+            });
+
     // Monad execution deferred.
     cout << "Monad definition end." << endl;
 
@@ -71,6 +117,9 @@ int main(int argc, char *argv[])
     monad<bool>(1 + 1 == 3)|control::then_if(CLAM(fn1();))||control::then_if_not(CLAM(fn2();));
     // CLAM is all-capturing lambda: [=](){....}
 
+    mov.inner();
+
+    mini_linq.inner();
 
     cout << "END" << endl;
 }

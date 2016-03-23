@@ -24,7 +24,7 @@ namespace monads
             return [](std::function<T(void)> func) -> monad<T>
             {
                 auto eval = func();
-                return monad<T>(eval);
+                return monad<T>(std::move(eval));
             };
         }
 
@@ -37,7 +37,7 @@ namespace monads
                 auto eval = func();
                 with(eval);
 
-                return monad<T>(eval);
+                return monad<T>(std::move(eval));
             };
         }
 
@@ -62,7 +62,7 @@ namespace monads
                     expr(element);
                 });
 
-                return monad<std::vector<T>>(eval);
+                return monad<std::vector<T>>(std::move(eval));
             };
         }
 
@@ -76,7 +76,46 @@ namespace monads
 
                 eval.push_back(thing);
 
-                return monad<std::vector<T>>(eval);
+                return monad<std::vector<T>>(std::move(eval));
+            };
+        }
+
+        // Where.
+        template <typename T>
+        auto static where(std::function<bool(T &)> expr) -> MONAD_CHAIN(std::vector<T>)
+        {
+            return [expr](std::function<std::vector<T>(void)> func) -> monad<std::vector<T>>
+            {
+                auto eval = func();
+                auto ret = std::vector<T>();
+
+                std::for_each(std::begin(eval), std::end(eval), [expr, &ret](T element)
+                {
+                    if (expr(element))
+                    {
+                        ret.push_back(element);
+                    }
+                });
+
+                return monad<std::vector<T>>(std::move(ret));
+            };
+        }
+
+        // Select.
+        template <typename T, typename Q>
+        auto static select(std::function<Q(T &)> expr) -> MONAD_TRANSMUTE(std::vector<T>, std::vector<Q>)
+        {
+            return [expr](std::function<std::vector<T>(void)> func) -> monad<std::vector<Q>>
+            {
+                auto eval = func();
+                auto ret = std::vector<Q>();
+
+                std::for_each(std::begin(eval), std::end(eval), [expr, &ret](T element)
+                {
+                    ret.push_back(expr(element));
+                });
+
+                return monad<std::vector<Q>>(std::move(ret));
             };
         }
 
@@ -95,7 +134,7 @@ namespace monads
                     expr(i);
                 }
 
-                return monad<int2tuple>(eval);
+                return monad<int2tuple>(std::move(eval));
             };
         }
 
@@ -120,7 +159,7 @@ namespace monads
                 auto eval = func();
                 auto ret = expr(eval);
 
-                return monad<B>(ret);
+                return monad<B>(std::move(ret));
             };
         }
     };
