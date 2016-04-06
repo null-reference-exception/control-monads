@@ -45,7 +45,22 @@
         public static Monad<T> operator |(Monad<T> input, Func<Func<T>, Monad<T>> func)
         {
             return new Monad<T>(() => func(input.Inner).Inner());
-        } 
+        }
+
+        /// <summary>
+        /// As operators cannot be generic in C#, we need a method to transmute a monad
+        /// of type T into a monad of type Q. This allows us, for instance, to cut a chain
+        /// of IEnumerable monads, count the elements and from there on, work only with
+        /// int monads. Then maybe compare the int to another int and work only with
+        /// bool monads from there on.
+        /// </summary>
+        /// <typeparam name="Q"></typeparam>
+        /// <param name="func"></param>
+        /// <returns></returns>
+        public Monad<Q> Transmute<Q>(Func<Func<T>, Monad<Q>> func)
+        {
+            return new Monad<Q>(() => func(this.Inner).Inner());
+        }
     }
 
     /// <summary>

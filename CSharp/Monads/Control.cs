@@ -1,9 +1,13 @@
 ﻿namespace Monads
 {
     using System;
+    using System.Linq;
+    using System.Collections.Generic;
 
     public static class Control
     {
+        // Chain functions. --------------------------------------------------------------------
+
         /// <summary>
         /// Monadic chain function that triggers action based on the input bool monad.
         /// Unchanged input monad is sent to the output.
@@ -87,5 +91,63 @@
         {
             return (func => (!func()).ToMonad());
         }
+
+        /// <summary>
+        /// Monadic chain function that performs action for every element of an IEnumerable.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static Func<Func<IEnumerable<T>>, Monad<IEnumerable<T>>> For<T>(Action<T> action)
+        {
+            return (func =>
+            {
+                var eval = func();
+                foreach (var obj in eval)
+                {
+                    action(obj);
+                }
+
+                return eval.ToMonad();
+            });
+        }
+
+        public static Func<Func<int>, Monad<int>> Add(int number)
+        {
+            return (func => (func() + number).ToMonad());
+        }
+
+        // Transmutation functions. --------------------------------------------------------------
+
+        /// <summary>
+        /// Counts the elements inside input IEnumerable monad and return a new
+        /// int monad containing the count.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static Func<Func<IEnumerable<T>>, Monad<int>> Count<T>()
+        {
+            return (func =>
+            {
+                var eval = func();
+                return eval.Count().ToMonad();
+            });
+        }
+
+        /// <summary>
+        /// Calls Equals(other) on input monad inner object and return a
+        /// new bool monad with the result of the comparison.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public static Func<Func<T>, Monad<bool>> MndEquals<T>(T other)
+        {
+            return (func =>
+            {
+                var eval = func();
+                return eval.Equals(other).ToMonad();
+            });
+        } 
     }
 }
